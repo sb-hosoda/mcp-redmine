@@ -15,6 +15,10 @@
 | `update_issue` | チケット更新（ステータス変更、担当者変更等） |
 | `add_comment` | チケットへのコメント追加 |
 | `bulk_update_issues` | 複数チケットの一括更新 |
+| `list_issue_relations` | 関連するチケット（リレーション）の一覧取得 |
+| `create_issue_relation` | 関連するチケットの登録（関連・重複・ブロック・先行/後続など） |
+| `update_issue_relation` | 関連するチケットの編集（削除→再作成。リレーションIDは変わる） |
+| `delete_issue_relation` | 関連するチケットの削除 |
 
 ### プロジェクト
 

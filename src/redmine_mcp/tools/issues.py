@@ -226,3 +226,96 @@ def register(mcp: FastMCP, client: RedmineClient) -> None:
             except Exception as e:
                 results.append({"id": iid, "status": "error", "message": str(e)})
         return {"results": results}
+
+    @mcp.tool()
+    async def list_issue_relations(issue_id: int) -> dict[str, Any]:
+        """List relations (related issues) of a Redmine issue.
+
+        Args:
+            issue_id: The issue id.
+        """
+        return await client.get(f"/issues/{issue_id}/relations.json")
+
+    @mcp.tool()
+    async def create_issue_relation(
+        issue_id: int,
+        issue_to_id: int,
+        relation_type: str = "relates",
+        delay: int | None = None,
+    ) -> dict[str, Any]:
+        """Create a relation between two Redmine issues.
+
+        Args:
+            issue_id: The source issue id.
+            issue_to_id: The related issue id.
+            relation_type: One of relates, duplicates, duplicated, blocks, blocked,
+                           precedes, follows, copied_to, copied_from (default "relates").
+            delay: Delay in days. Only valid for precedes/follows.
+        """
+        relation_data: dict[str, Any] = {
+            "issue_to_id": issue_to_id,
+            "relation_type": relation_type,
+        }
+        if delay is not None:
+            relation_data["delay"] = delay
+        return await client.post(
+            f"/issues/{issue_id}/relations.json", json={"relation": relation_data}
+        )
+
+    @mcp.tool()
+    async def update_issue_relation(
+        relation_id: int,
+        issue_to_id: int | None = None,
+        relation_type: str | None = None,
+        delay: int | None = None,
+    ) -> dict[str, Any]:
+        """Update an issue relation.
+
+        Redmine has no API to update relations, so the relation is deleted and
+        recreated with the new values (the relation id changes). If recreation
+        fails, the original relation is restored.
+
+        Args:
+            relation_id: The relation id to update.
+            issue_to_id: New related issue id (defaults to the current one).
+            relation_type: New relation type (defaults to the current one).
+            delay: New delay in days. Only valid for precedes/follows.
+        """
+        current = (await client.get(f"/relations/{relation_id}.json"))["relation"]
+        new_type = relation_type if relation_type is not None else current["relation_type"]
+        relation_data: dict[str, Any] = {
+            "issue_to_id": issue_to_id if issue_to_id is not None else current["issue_to_id"],
+            "relation_type": new_type,
+        }
+        if delay is not None:
+            relation_data["delay"] = delay
+        elif current.get("delay") is not None and new_type == current["relation_type"]:
+            relation_data["delay"] = current["delay"]
+
+        await client.delete(f"/relations/{relation_id}.json")
+        try:
+            return await client.post(
+                f"/issues/{current['issue_id']}/relations.json",
+                json={"relation": relation_data},
+            )
+        except Exception:
+            original: dict[str, Any] = {
+                "issue_to_id": current["issue_to_id"],
+                "relation_type": current["relation_type"],
+            }
+            if current.get("delay") is not None:
+                original["delay"] = current["delay"]
+            await client.post(
+                f"/issues/{current['issue_id']}/relations.json",
+                json={"relation": original},
+            )
+            raise
+
+    @mcp.tool()
+    async def delete_issue_relation(relation_id: int) -> dict[str, Any]:
+        """Delete an issue relation.
+
+        Args:
+            relation_id: The relation id to delete (see list_issue_relations).
+        """
+        return await client.delete(f"/relations/{relation_id}.json")

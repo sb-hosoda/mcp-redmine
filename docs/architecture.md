@@ -53,7 +53,7 @@ Claude Code / MCP Client ┤         ├▶  FastMCP Server  ──▶  RedmineC
 
 | モジュール | ツール |
 |-----------|--------|
-| `issues.py` | list, get, search, create, update, comment, bulk update |
+| `issues.py` | list, get, search, create, update, comment, bulk update, relations (list, create, update, delete) |
 | `projects.py` | list, get |
 | `master.py` | statuses, trackers, priorities, users |
 | `wiki.py` | list pages, get page, get ticket rules |
